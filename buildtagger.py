@@ -14,7 +14,7 @@ import random
 all_chars = string.ascii_letters + string.punctuation + string.digits + ' '
 start_time = time.time()
 use_cuda = torch.cuda.is_available()
-device = torch.device("cuda:0" if use_cuda else "cpu")
+device = torch.device("cuda" if use_cuda else "cpu")
 
 
 class WordCharCNNEmbedding(nn.Module):
@@ -149,9 +149,11 @@ def train_model(train_file, model_file):
 	hidden_dim = 128
 	num_layers = 2
 
-	embedding = WordCharCNNEmbedding(len(word2idx), d_emb, len(all_chars), c_emb, conv_l).to(device)
-	tagger = POSTagger(embedding, d_emb + conv_l, hidden_dim, len(tag2idx), word2idx, num_layers).to(device)
-	loss_function = nn.CrossEntropyLoss().to(device)
+	embedding = WordCharCNNEmbedding(len(word2idx), d_emb, len(all_chars), c_emb, conv_l)
+	embedding = nn.DataParallel(embedding)
+	tagger = POSTagger(embedding, d_emb + conv_l, hidden_dim, len(tag2idx), word2idx, num_layers)
+	tagger  = nn.DataParallel(tagger)
+	loss_function = nn.CrossEntropyLoss()
 	# loss_function = nn.NLLLoss()
 	optimizer = optim.Adam(tagger.parameters(), lr=0.001)
 	# optimizer = optim.SGD(tagger.parameters(), lr=0.001)
@@ -175,7 +177,7 @@ def train_model(train_file, model_file):
 			optimizer.step()
 		print('Time taken: {}s'.format(time.time() - curr_time))
 		curr_time = time.time()
-		print("Epoch: %d, loss: %1.5f" % (epoch, epoch_loss / len(training_data)))
+		print("Epoch: %d, loss: %1.6f" % (epoch, epoch_loss / len(training_data)))
 		if time.time() - start_time > 559: break
 	torch.save((d_emb, c_emb, hidden_dim, conv_l, word2idx, tag2idx, idx2tag, num_layers, embedding.state_dict(),
 				tagger.state_dict()), model_file)
@@ -188,3 +190,4 @@ if __name__ == "__main__":
 	train_file = sys.argv[1]
 	model_file = sys.argv[2]
 	train_model(train_file, model_file)
+
