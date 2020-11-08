@@ -157,14 +157,14 @@ def train_model(train_file, model_file):
 
 	start_time = time.time()
 	curr_time = time.time()
-	epochs = 500
-	batch_size = 100
+	epochs = 50000
+	batch_size = 50
 	for epoch in range(epochs):
 		epoch_loss = 0.0
 		samples = random.sample(training_data, batch_size)
 		for sentence, tags in samples:
 			# sentence, tags = training_data[i]
-			if time.time() - start_time > 559: break
+			if time.time() - start_time > 579: break
 			tagger.zero_grad()
 			targets = tags2tensor(tags, tag2idx).to(device)
 			tag_scores = tagger(sentence)
@@ -175,7 +175,7 @@ def train_model(train_file, model_file):
 		print('Time taken: {}s'.format(time.time() - curr_time))
 		curr_time = time.time()
 		print("Epoch: %d, loss: %1.6f" % (epoch, epoch_loss / len(training_data)))
-		if time.time() - start_time > 559: break
+		if time.time() - start_time > 579: break
 	torch.save((d_emb, c_emb, hidden_dim, conv_l, word2idx, tag2idx, idx2tag, num_layers, embedding.state_dict(),
 				tagger.state_dict()), model_file)
 	print('Total time taken: {}'.format(time.time() - start_time))
