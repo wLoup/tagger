@@ -14,7 +14,8 @@ import random
 all_chars = string.ascii_letters + string.punctuation + string.digits + ' '
 start_time = time.time()
 use_cuda = torch.cuda.is_available()
-device = torch.device("cuda:1" if use_cuda else "cpu")
+# device = torch.device("cuda:1" if use_cuda else "cpu")
+device = torch.device("cuda:0" if use_cuda else "cpu")
 
 
 class WordCharCNNEmbedding(nn.Module):
@@ -22,8 +23,10 @@ class WordCharCNNEmbedding(nn.Module):
 		super(WordCharCNNEmbedding, self).__init__()
 		self.char_embedding = nn.Embedding(char_size, c_emb).to(device)
 		self._init_char_embedding(char_padding_idx)
-		self.conv_embedding = nn.Sequential(nn.Conv1d(in_channels=c_emb, 
-													  out_channels=conv_l,kernel_size=kernel_size, padding=padding_size).to(device),nn.ReLU()).to(device)
+		self.conv_embedding = nn.Sequential(
+			nn.Conv1d(in_channels=c_emb,out_channels=conv_l,kernel_size=kernel_size, padding=padding_size).to(device),
+			# nn.BatchNorm1d(conv_l),
+			nn.ReLU()).to(device)
 		self.word_embedding = nn.Embedding(vocab_size, d_emb).to(device)
 
 	def _init_char_embedding(self, padding_idx):
@@ -48,10 +51,12 @@ class POSTagger(nn.Module):
 	def __init__(self, embedding, n_emb, hidden_dim, ntags, word2idx, num_layers):
 		super(POSTagger, self).__init__()
 		self.embedding = embedding
+		# self.tagger_rnn = nn.LSTM(input_size=n_emb, hidden_size=hidden_dim, num_layers=2, dropout=0.2,bidirectional=True).to(device)
 		self.tagger_rnn = nn.LSTM(input_size=n_emb, hidden_size=hidden_dim, bidirectional=True).to(device)
 		self._init_rnn_weights()
 
-		self.hidden2tag = nn.Sequential(nn.Linear(in_features=hidden_dim * 2, out_features=ntags)).to(device)
+		self.hidden2tag = nn.Sequential(
+			nn.Linear(in_features=hidden_dim * 2, out_features=ntags).to(device)).to(device)
 		self._init_linear_weights_and_bias()
 		self.word2idx = word2idx
 
@@ -153,7 +158,9 @@ def train_model(train_file, model_file):
 	loss_function = nn.CrossEntropyLoss().to(device)
 	# loss_function = nn.NLLLoss()
 	optimizer = optim.Adam(tagger.parameters(), lr=0.001)
-	# optimizer = optim.SGD(tagger.parameters(), lr=0.001)
+	# optimizer = optim.Adam(tagger.parameters(), lr=LR, betas=(0.9, 0.99), eps=1e-06, weight_decay=0.0005)
+	# optimizer = optim.SGD(tagger.parameters(), lr=0.001, momentum=0.8)
+	# optimizer = optim.RMSprop(tagger.parameters(), lr=0.001, alpha=0.9)
 
 	start_time = time.time()
 	curr_time = time.time()
@@ -174,7 +181,7 @@ def train_model(train_file, model_file):
 			optimizer.step()
 		print('Time taken: {}s'.format(time.time() - curr_time))
 		curr_time = time.time()
-		print("Epoch: %d, loss: %1.6f" % (epoch, epoch_loss / len(training_data)))
+		print("Epoch: %d, loss: %1.5f" % (epoch, epoch_loss / len(training_data)))
 		if time.time() - start_time > 579: break
 	torch.save((d_emb, c_emb, hidden_dim, conv_l, word2idx, tag2idx, idx2tag, num_layers, embedding.state_dict(),
 				tagger.state_dict()), model_file)
