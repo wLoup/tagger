@@ -20,8 +20,10 @@ class WordCharCNNEmbedding(nn.Module):
 		super(WordCharCNNEmbedding, self).__init__()
 		self.char_embedding = nn.Embedding(char_size, c_emb).to(device)
 		self._init_char_embedding(char_padding_idx)
-		self.conv_embedding = nn.Sequential(nn.Conv1d(in_channels=c_emb,
-													  out_channels=conv_l,kernel_size=kernel_size, padding=padding_size).to(device),nn.ReLU()).to(device)
+		self.conv_embedding = nn.Sequential(
+			nn.Conv1d(in_channels=c_emb,out_channels=conv_l,kernel_size=kernel_size, padding=padding_size).to(device),
+			nn.BatchNorm1d(conv_l),
+			nn.ReLU()).to(device)
 		self.word_embedding = nn.Embedding(vocab_size, d_emb).to(device)
 
 	def _init_char_embedding(self, padding_idx):
